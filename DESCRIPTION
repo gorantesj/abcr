@@ -1,16 +1,19 @@
 Package: abcr
-Title: What the Package Does (One Line, Title Case)
+Title: Implement el modelo Mendoza, Nieto-Barajas (2017) para estimación de resultados electorales
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Gerardo",
+           family = "Orantes Jordan",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
+           email = "gorantesj@hotmail.com",
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+Description: Proporciona las funciones para poder utilizar el modelo de probabilidad de Mendoza, Nieto-Barajas (2017) para poder estimar los resultados electorales y la participación ciudadana para los conteos rápidos.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
+Imports: 
+    dplyr
+URL: https://github.com/gorantesj/abcr
+BugReports: https://github.com/gorantesj/abcr/issues

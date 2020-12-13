@@ -17,3 +17,6 @@ Imports:
     dplyr
 URL: https://github.com/gorantesj/abcr
 BugReports: https://github.com/gorantesj/abcr/issues
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

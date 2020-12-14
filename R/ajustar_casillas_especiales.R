@@ -8,7 +8,7 @@
 #'
 #' @return
 #' @export
-#'
+#' @import dplyr
 #' @examples
 ajustar_casillas_especiales <- function(muestra, marco_muestral, criterio){
 if(criterio=="2018"){

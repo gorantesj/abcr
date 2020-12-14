@@ -1,8 +1,15 @@
 #' Ajusta el modelo Mendoza, Nieto-Barajas (2016)
 #'
+#' @param id_estratos
+#' @param muestra
+#' @param marco_muestral
+#' @param candidatos
+#' @param n_sim
+#'
 #' @return
 #' @export
-#'
+#' @importFrom purrr map2 map2 pmap
+#' @import dplyr
 #' @examples
 ajustar_modelo <- function(id_estratos ,muestra, marco_muestral, candidatos,
                            n_sim=10000){
@@ -19,10 +26,10 @@ ajustar_modelo <- function(id_estratos ,muestra, marco_muestral, candidatos,
                                     candidatos = {{candidatos}},
                                     n_sim = n_sim)
   # Simular parámetros
-  pesos <- expand(pesos, nesting(!!ensym(id_estratos), peso),
+  pesos <- tidyr::expand(pesos, tidyr::nesting(!!ensym(id_estratos), peso),
                   candidato=unique(estratos_muestra$candidato))
   estratos <- full_join(pesos,estratos_muestra) %>%
-    mutate(across(everything(), ~replace_na(.x, 0)))
+    mutate(across(everything(), ~tidyr::replace_na(.x, 0)))
   estratos <- estratos %>%
     mutate(gamma=if_else(c>1,
                          map2(.x = alpha, .y=beta,
@@ -30,7 +37,7 @@ ajustar_modelo <- function(id_estratos ,muestra, marco_muestral, candidatos,
                          list(NA)),
            theta=if_else(c>1,
                          pmap(list(x=mu, y=gamma, z=n),.f =  function(x, y, z){
-                           rtruncnorm(n=n_sim,
+                           truncnorm::rtruncnorm(n=n_sim,
                                       mean = x,
                                       sd = (y*z)^(-1/2),
                                       a=0,
@@ -40,7 +47,7 @@ ajustar_modelo <- function(id_estratos ,muestra, marco_muestral, candidatos,
   # Simular lambdas
   nacional <- estratos %>%
     select(ESTRATO, candidato, peso, theta) %>%
-    unnest(theta) %>%
+    tidyr::unnest(theta) %>%
     group_by(ESTRATO ,candidato) %>%
     mutate(i=row_number(),theta=theta*peso) %>%
     group_by(candidato, i) %>%

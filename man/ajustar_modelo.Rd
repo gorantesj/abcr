@@ -6,6 +6,9 @@
 \usage{
 ajustar_modelo(id_estratos, muestra, marco_muestral, candidatos, n_sim = 10000)
 }
+\arguments{
+\item{n_sim}{}
+}
 \value{
 
 }

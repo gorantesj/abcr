@@ -7,7 +7,7 @@ calcular_pesos <- function(marco_muestral, id_estratos){
 
 datos_muestra <- function(muestra, id_estratos, candidatos, n_sim=10000){
   estratos_muestra <- muestra %>%
-    pivot_longer({{candidatos}}, names_to="candidato", values_to="x") %>%
+    tidyr::pivot_longer({{candidatos}}, names_to="candidato", values_to="x") %>%
     group_by({{id_estratos}}, candidato) %>%
     summarise(c=n(),
               n=sum(LISTA_NOMINAL),

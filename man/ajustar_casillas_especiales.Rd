@@ -7,9 +7,9 @@
 ajustar_casillas_especiales(muestra, marco_muestral, criterio)
 }
 \arguments{
-\item{muestra}{La muestra con la que se realiza las estimaciones}
+\item{muestra}{La muestra con la que se realiza las estimaciones. Debe contener la columna LISTA_NOMINAL.}
 
-\item{marco_muestral}{El marco muestral del que se extrae la muestra}
+\item{marco_muestral}{El marco muestral del que se extrae la muestra. Debe contener la columnas ID_ESTADO, ID_DISTRITO, SECCION, TIPO_CASILLA, EXT_CONTIGUA, ID_CASILLA, y LISTA_NOMINA. Las casillas especiales deben tener la letra 'S'.}
 
 \item{criterio}{Criterio para ajustar la lista nominal de las casillas especiales, puesto que por su naturaleza no cuentan con lista nominal. Las opciones disponibles son '2018'.
 \emph{2018}: Agregar la lista nominal máxima a las casillas especiales (750). Posteriormente, restar a todas las casillas de manera uniforme el incremento en la lista nominal.}

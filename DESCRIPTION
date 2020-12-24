@@ -1,14 +1,20 @@
 Package: abcr
-Title: Implement el modelo Mendoza, Nieto-Barajas (2017) para estimación de resultados electorales
+Title: Implementa el modelo Mendoza, Nieto-Barajas (2016) para estimación de resultados electorales
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "Gerardo",
+    c(person(given = "Gerardo",
            family = "Orantes Jordan",
            role = c("aut", "cre"),
            email = "gorantesj@hotmail.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: Proporciona las funciones para poder utilizar el modelo de probabilidad de Mendoza, Nieto-Barajas (2017) para poder estimar los resultados electorales y la participación ciudadana para los conteos rápidos.
+           comment = c(ORCID = "YOUR-ORCID-ID")),
+           person(given = "Manuel",
+           family = "Mendoza Ramírez",
+           role = c("aut"),
+           email = "gorantesj@hotmail.com",
+           comment = c(ORCID = "YOUR-ORCID-ID")))
+Description: Proporciona las funciones para poder utilizar el modelo de probabilidad de Mendoza, Nieto-Barajas (2016) para poder estimar los resultados electorales y la participación ciudadana para los conteos rápidos.
 License: MIT + file LICENSE
+Language: es
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
@@ -16,7 +22,8 @@ RoxygenNote: 7.1.1
 Imports: 
     dplyr,
     tidyr,
-    truncnorm
+    truncnorm,
+    purrr
 URL: https://github.com/gorantesj/abcr
 BugReports: https://github.com/gorantesj/abcr/issues
 Suggests: 

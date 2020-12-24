@@ -2,16 +2,27 @@
 % Please edit documentation in R/ajustar_modelo.R
 \name{ajustar_modelo}
 \alias{ajustar_modelo}
-\title{Ajusta el modelo Mendoza, Nieto-Barajas (2016)}
+\title{Estima el porcentaje efectivo de voto para cada candidato}
 \usage{
-ajustar_modelo(id_estratos, muestra, marco_muestral, candidatos, n_sim = 10000)
+ajustar_modelo(muestra, id_estratos, marco_muestral, candidatos, n_sim = 10000)
 }
 \arguments{
-\item{n_sim}{}
+\item{muestra}{Base de datos de muestra. Debe contener las columnas con resultados por candidato, el identificador del estrato y la lista nominal.}
+
+\item{id_estratos}{El nombre de la variable dentro de la base de datos que identifica a los estratos.}
+
+\item{marco_muestral}{Base de datos que contiene el marco muestral. Debe contener un identificar de estrato y la lista nominal.}
+
+\item{candidatos}{Un vector con los nombres de las variables de los candidatos cuya votación se desea estimar.}
+
+\item{n_sim}{El número de simulaciones para los parámetros.}
 }
 \value{
 
 }
 \description{
-Ajusta el modelo Mendoza, Nieto-Barajas (2016)
+Implenta el modelo Mendoza, Nieto-Barajas (2016) para estimar el porcentaje de voto efectivo para cada candidato. Esta implementación incorpora las adaptaciones que se hicieron para la elección presidencial de 2018 documentadas en Orantes-Jordan (2019).
+}
+\seealso{
+\url{https://www.sciencedirect.com/science/article/abs/pii/S0261379415300305}
 }

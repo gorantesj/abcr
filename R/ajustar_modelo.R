@@ -1,17 +1,18 @@
-#' Ajusta el modelo Mendoza, Nieto-Barajas (2016)
+#' Estima el porcentaje efectivo de voto para cada candidato
 #'
-#' @param id_estratos
-#' @param muestra
-#' @param marco_muestral
-#' @param candidatos
-#' @param n_sim
-#'
+#' @param muestra Base de datos de muestra. Debe contener las columnas con resultados por candidato, el identificador del estrato y la lista nominal.
+#' @param id_estratos El nombre de la variable dentro de la base de datos que identifica a los estratos.
+#' @param marco_muestral Base de datos que contiene el marco muestral. Debe contener un identificar de estrato y la lista nominal.
+#' @param candidatos Un vector con los nombres de las variables de los candidatos cuya votación se desea estimar.
+#' @param n_sim El número de simulaciones para los parámetros.
+#' @description Implenta el modelo Mendoza, Nieto-Barajas (2016) para estimar el porcentaje de voto efectivo para cada candidato. Esta implementación incorpora las adaptaciones que se hicieron para la elección presidencial de 2018 documentadas en Orantes-Jordan (2019).
+#' @seealso \url{https://www.sciencedirect.com/science/article/abs/pii/S0261379415300305}
 #' @return
 #' @export
 #' @importFrom purrr map2 map2 pmap
 #' @import dplyr
 #' @examples
-ajustar_modelo <- function(id_estratos ,muestra, marco_muestral, candidatos,
+ajustar_modelo <- function(muestra,id_estratos , marco_muestral, candidatos,
                            n_sim=10000){
   # Ajustar casillas especiales
   bases_datos <- ajustar_casillas_especiales(muestra = muestra,

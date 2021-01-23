@@ -11,18 +11,16 @@
 #' @import dplyr
 #' @examples
 ajustar_casillas_especiales <- function(muestra, marco_muestral, criterio){
-if(criterio=="2018"){
-  especiales <- marco_muestral %>% count(especial=TIPO_CASILLA=="S")
-  marco_muestral <- marco_muestral %>%
-    mutate(LISTA_NOMINAL=if_else(TIPO_CASILLA=="S", 750,LISTA_NOMINAL),
-           LISTA_NOMINAL=LISTA_NOMINAL-
-             750*(especiales %>% filter(especial) %>% pull(n))/
-             (especiales %>% filter(!especial) %>% pull(n)))
-  muestra <- muestra %>%
-    select(-LISTA_NOMINAL) %>%
-    inner_join(marco_muestral %>%
-                 select(ID_ESTADO, ID_DISTRITO, SECCION, TIPO_CASILLA,
-                        EXT_CONTIGUA, ID_CASILLA, LISTA_NOMINAL) )
+  if(criterio=="2018"){
+    especiales <- marco_muestral %>% count(especial=TIPO_CASILLA=="S")
+    n_especiales <- especiales %>% filter(especial) %>% pull(n)
+    nn_especiales <- especiales %>% filter(!especial) %>% pull(n)
+    marco_muestral <- marco_muestral %>%
+      mutate(LISTA_NOMINAL=if_else(TIPO_CASILLA=="S", 750,LISTA_NOMINAL),
+             LISTA_NOMINAL=LISTA_NOMINAL-750*(n_especiales/nn_especiales))
+             muestra <- muestra %>%
+               select(-LISTA_NOMINAL) %>%
+               inner_join(marco_muestral)
 
   }
   return(list(muestra=muestra,marco_muestral=marco_muestral))

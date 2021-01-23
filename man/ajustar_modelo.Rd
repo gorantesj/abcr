@@ -4,7 +4,14 @@
 \alias{ajustar_modelo}
 \title{Estima el porcentaje efectivo de voto para cada candidato}
 \usage{
-ajustar_modelo(muestra, id_estratos, marco_muestral, candidatos, n_sim = 10000)
+ajustar_modelo(
+  muestra,
+  id_estratos,
+  marco_muestral,
+  candidatos,
+  n_sim = 10000,
+  criterio_ce
+)
 }
 \arguments{
 \item{muestra}{Base de datos de muestra. Debe contener las columnas con resultados por candidato, el identificador del estrato y la lista nominal.}
@@ -16,6 +23,8 @@ ajustar_modelo(muestra, id_estratos, marco_muestral, candidatos, n_sim = 10000)
 \item{candidatos}{Un vector con los nombres de las variables de los candidatos cuya votación se desea estimar.}
 
 \item{n_sim}{El número de simulaciones para los parámetros.}
+
+\item{criterio_ce}{\bold{Default:} "2018".}
 }
 \value{
 
@@ -24,5 +33,5 @@ ajustar_modelo(muestra, id_estratos, marco_muestral, candidatos, n_sim = 10000)
 Implenta el modelo Mendoza, Nieto-Barajas (2016) para estimar el porcentaje de voto efectivo para cada candidato. Esta implementación incorpora las adaptaciones que se hicieron para la elección presidencial de 2018 documentadas en Orantes-Jordan (2019).
 }
 \seealso{
-\url{https://www.sciencedirect.com/science/article/abs/pii/S0261379415300305}
+\href{https://www.sciencedirect.com/science/article/abs/pii/S0261379415300305}{Mendoza, Nieto-Barajas (2017)}
 }

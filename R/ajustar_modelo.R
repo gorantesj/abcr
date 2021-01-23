@@ -4,20 +4,22 @@
 #' @param id_estratos El nombre de la variable dentro de la base de datos que identifica a los estratos.
 #' @param marco_muestral Base de datos que contiene el marco muestral. Debe contener un identificar de estrato y la lista nominal.
 #' @param candidatos Un vector con los nombres de las variables de los candidatos cuya votación se desea estimar.
+#' @param criterio_ce \bold{Default:} "2018".
 #' @param n_sim El número de simulaciones para los parámetros.
+#'
 #' @description Implenta el modelo Mendoza, Nieto-Barajas (2016) para estimar el porcentaje de voto efectivo para cada candidato. Esta implementación incorpora las adaptaciones que se hicieron para la elección presidencial de 2018 documentadas en Orantes-Jordan (2019).
-#' @seealso \url{https://www.sciencedirect.com/science/article/abs/pii/S0261379415300305}
+#' @seealso \href{https://www.sciencedirect.com/science/article/abs/pii/S0261379415300305}{Mendoza, Nieto-Barajas (2017)}
 #' @return
 #' @export
 #' @importFrom purrr map2 map2 pmap
 #' @import dplyr
 #' @examples
 ajustar_modelo <- function(muestra,id_estratos , marco_muestral, candidatos,
-                           n_sim=10000){
+                           n_sim=10000, criterio_ce){
   # Ajustar casillas especiales
   bases_datos <- ajustar_casillas_especiales(muestra = muestra,
                                              marco_muestral = marco_muestral,
-                                             criterio = "2018")
+                                             criterio = criterio_ce)
   # Calcular pesos
   pesos <- calcular_pesos(marco_muestral = bases_datos$marco_muestral,
                           id_estratos = {{id_estratos}})
@@ -47,15 +49,18 @@ ajustar_modelo <- function(muestra,id_estratos , marco_muestral, candidatos,
                          list(runif(n=10000))))
   # Simular lambdas
   nacional <- estratos %>%
-    select(ESTRATO, candidato, peso, theta) %>%
+    select({{id_estratos}}, candidato, peso, theta) %>%
     tidyr::unnest(theta) %>%
-    group_by(ESTRATO ,candidato) %>%
+    group_by({{id_estratos}} ,candidato) %>%
     mutate(i=row_number(),theta=theta*peso) %>%
     group_by(candidato, i) %>%
     summarise(lambda=sum(theta))%>%
     group_by(i) %>%
     mutate(lambda=lambda/sum(lambda)) %>%
     group_by(candidato) %>%
-    summarise(quantile(lambda, probs = c(0.025,0.975),na.rm=T))
+    summarise(ic_025=quantile(lambda, probs = c(0.025)),
+              ic_975=quantile(lambda, probs = c(0.975)),
+              est_puntual=mean(lambda)
+              )
   return(list(nacional=nacional, estratos=estratos))
 }

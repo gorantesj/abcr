@@ -2,6 +2,7 @@
 
 export(ajustar_casillas_especiales)
 export(ajustar_modelo)
+export(evaluar_estimacion)
 import(dplyr)
 importFrom(purrr,map2)
 importFrom(purrr,pmap)

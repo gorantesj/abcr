@@ -1,0 +1,446 @@
+---
+title: "Michoacán"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Michoacan}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+  
+```{r, include = FALSE}
+knitr::opts_chunk$set(echo = F, 
+                      message = F,
+                      warning = F, 
+                      fig.asp = 0.8, 
+                      fig.width = 7, 
+                      out.width = "100%",
+                      dpi = 300,
+                      collapse = TRUE,
+                      comment = "#>"
+)
+```
+  
+```{r setup}
+library(abcr) # Paquete propio
+library(tidyverse)
+library(patchwork)
+theme_set(theme_minimal())
+```
+  
+```{r leer_base}
+  bd <- read_delim("~/Downloads/Gobernador2015MichoacanCasilla_final.txt",
+delim = "|",locale = locale(encoding = "latin1"),
+col_types = paste(c(rep("c",11),
+rep("d",17),
+rep("c",11)),collapse="")) %>% 
+mutate(TIPO_CASILLA=substring(text = CASILLA,first = 1, last = 1),
+across(where(is.numeric), ~replace_na(.x, 0)))
+
+```
+  
+  
+## Evaluación del modelo para una muestra aleatoria
+  
+```{r}
+muestra <- bd %>% 
+  group_by(ID_DISTRITO) %>% sample_frac(size=.05) %>% ungroup()
+  resultado <- ajustar_modelo(muestra = muestra, criterio_ce = "2018",
+  id_estratos = ID_DISTRITO,
+  marco_muestral = bd, 
+  candidatos = c(PAN,PRI,PRD, PT, PVEM, MC, NVA_ALIANZA, MORENA, PH, ES, PRI_PVEM, PRD_PT_NVA_ALIANZA, VOTOS_CAND_NREG))
+  
+```
+  
+```{r}
+(g1 <- evaluar_estimacion(resultado$nacional, marco_muestral = bd) +
+   labs(subtitle = "Intervalos al 95% de credibilidad- Estratificación: Distrito Federal",
+        caption = glue::glue("n={scales::comma(nrow(muestra))}")))
+
+```
+  
+## Evaluación del modelo para un criterio de estratificación y un tamaño de muestra fijo
+```{r}
+evaluacion <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = 0.05,
+                                      id_estratos = ID_DISTRITO,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG)) 
+
+
+
+```
+
+```{r}
+(g1 <- evaluar_estratificacion_cobertura(evaluacion)+
+   labs(subtitle = "100 muestras - Estratificación: Distrito Federal"))
+```
+
+```{r }
+(g2 <- evaluar_estratificacion_error(evaluacion,error = 0.01)+
+   plot_annotation(title="Diferencia entre estimador puntural y el resultado",
+                   subtitle = "100 muestras - Estratificación: Distrito Federal"))
+
+```
+
+```{r }
+(g3 <- evaluar_estratificacion_precision(evaluacion, precision = 0.03)+
+   plot_annotation(title="Longitud del intervalo",
+                   subtitle = "100 muestras - Estratificación: Distrito Federal"))
+
+```
+
+
+## Evaluación para un criterio de estratificación fijo, un tamaño de muestra variable
+
+```{r}
+evaluacionN <- map(seq(0.04,0.1, by = 0.02),
+                   ~evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 10,
+                                      fracc_muestreo = .x,
+                                      id_estratos = estratificacion_df_ln,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))) 
+estimacionesN <- evaluacionN %>% reduce(bind_rows)
+
+```
+
+```{r}
+(g21 <- evaluar_n_cobertura(estimacionesN)+
+   labs(title = "Cobertura",
+        subtitle = "100 muestras-Estratificación: Distrito Federal"))
+
+
+```
+
+```{r}
+(g22 <- evaluar_n_error(estimacionesN)+
+   labs(title = "Diferencia máxima por muestra entre el estimador puntual y el resultado",
+        subtitle = "100 muestras-Estratificación: Distrito Federal")) 
+```
+
+```{r}
+(g23 <- evaluar_n_precision(estimacionesN)+
+    labs(title = "Longitud máxima del intervalo de estimación por muestra",
+        subtitle = "100 muestras-Estratificación: Distrito Federal")) 
+
+```
+
+
+## Evaluación del modelo para diferentes criterios de estratificación, y tamaño de muestra fijo
+```{r}
+# Distrito Federal
+bd <- bd %>% 
+  mutate(estratificacion_df=group_indices(., ID_DISTRITO))
+(bd %>% group_by(estratificacion_df) %>% group_size(x = .) >100) %>% sum()
+
+# Distrito Federal-Distrito Local
+bd <- bd %>% 
+  mutate(estratificacion_dl=group_indices(., ID_DISTRITO,ID_DISTRITO_LOCAL))
+bd <- bd %>% group_by(ID_DISTRITO,ID_DISTRITO_LOCAL) %>% 
+  mutate(aux=n()<100,
+         n=n()) %>% 
+  ungroup(ID_DISTRITO_LOCAL) %>% 
+  mutate(estratificacion_dl=case_when(sum(aux)>0~min(estratificacion_dl),
+                                      sum(aux)==0~estratificacion_dl))
+# Distrito Federal-Urbana
+bd <- bd %>% group_by(ID_DISTRITO,
+                      URBANA=TIPO_SECCION=="URBANA") %>% 
+    mutate(estratificacion_df_urb=cur_group_id()) 
+est_variable <- group_vars(bd)
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_urb=case_when(sum(aux)>0~min(estratificacion_df_urb),
+                                      sum(aux)==0~estratificacion_df_urb))
+
+# Distrito Federal-LN>577
+bd <- bd %>% group_by(ID_DISTRITO,
+                      GRANDE=LISTA_NOMINAL>median(bd$LISTA_NOMINAL)) %>% 
+    mutate(estratificacion_df_ln=cur_group_id()) 
+est_variable <- group_vars(bd)
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_ln=case_when(sum(aux)>0~min(estratificacion_df_ln),
+                                      sum(aux)==0~estratificacion_df_ln))
+
+# Distrito Federal-LN>median(LN)
+bd <- bd %>% 
+  group_by(ID_DISTRITO) %>% 
+  mutate(aux=median(LISTA_NOMINAL)) %>% 
+  group_by(.add = T,grande=LISTA_NOMINAL>aux) %>% 
+  mutate(estratificacion_df_ln2=cur_group_id())
+est_variable <- group_vars(bd)
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_ln2=case_when(sum(aux)>0~min(estratificacion_df_ln2),
+                                          sum(aux)==0~estratificacion_df_ln2))
+# Distrito Federal-Local2020
+bd <- bd %>% 
+  group_by(ID_DTTO_FEDERAL_jul2020,ID_DTTO_LOCAL_jul2020) %>% 
+  mutate(estratificacion_df_dl20=cur_group_id())
+est_variable <- group_vars(bd)
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_dl20=case_when(sum(aux)>0~min(estratificacion_df_dl20),
+                                          sum(aux)==0~estratificacion_df_dl20))
+# Distrito Federal-IM
+aux <- read_csv("~/Downloads/seccion_pca.csv")
+aux <- aux %>% mutate(SECCION=as.integer(SECCION))
+aux <- aux %>% unique()
+bd <- bd %>% mutate(SECCION=as.integer(SECCION)) 
+bd <- bd %>% left_join(aux,by = "SECCION")
+bd <- bd %>% mutate(CP1=if_else(is.na(.fittedPC1), 
+                                mean(.fittedPC1, na.rm = T),.fittedPC1))
+bd <- bd %>% 
+    group_by(ID_DISTRITO,marginados=CP1>median(CP1)) %>% 
+  mutate(estratificacion_df_im=cur_group_id())
+est_variable <- group_vars(bd)
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_im=case_when(sum(aux)>0~min(estratificacion_df_im),
+                                          sum(aux)==0~estratificacion_df_im))
+
+# Distrito Federal-Distrito Local-IM-Ur-ln
+bd <- bd %>% 
+  group_by(ID_DISTRITO,ID_DISTRITO_LOCAL, URBANA, GRANDE, marginados) %>% 
+  mutate(estratificacion_df_dl_im_ur_ln=cur_group_id())
+(est_variable <- group_vars(bd))
+
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_dl_im_ur_ln=case_when(
+    sum(aux)>0~min(estratificacion_df_dl_im_ur_ln),                                               sum(aux)==0~estratificacion_df_dl_im_ur_ln))
+
+(est_variable <- group_vars(bd))
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_dl_im_ur_ln=case_when(
+    sum(aux)>0~min(estratificacion_df_dl_im_ur_ln),                                               sum(aux)==0~estratificacion_df_dl_im_ur_ln)) 
+
+(est_variable <- group_vars(bd))
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_dl_im_ur_ln=case_when(
+    sum(aux)>0~min(estratificacion_df_dl_im_ur_ln),                                               sum(aux)==0~estratificacion_df_dl_im_ur_ln)) 
+
+(est_variable <- group_vars(bd))
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_dl_im_ur_ln=case_when(
+    sum(aux)>0~min(estratificacion_df_dl_im_ur_ln),                                               sum(aux)==0~estratificacion_df_dl_im_ur_ln)) 
+
+(est_variable <- group_vars(bd))
+bd <- bd %>% 
+  mutate(aux=n()<100) %>% 
+  ungroup(last(est_variable)) %>% 
+  mutate(estratificacion_df_dl_im_ur_ln=case_when(
+    sum(aux)>0~min(estratificacion_df_dl_im_ur_ln),                                               sum(aux)==0~estratificacion_df_dl_im_ur_ln)) 
+
+
+
+bd <- bd %>% ungroup()
+bd %>% count(estratificacion_df_dl_im_ur_ln)
+```
+
+No correr
+```{r}
+
+est_df <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_df,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+est_dl <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_dl,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+est_df_urb <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_df_urb,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+
+est_df_ln <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_df_ln,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+
+est_df_ln2 <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_df_ln2,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+
+est_df_dl20 <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_df_dl20,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+
+est_df_im <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_df_im,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+
+est_df_dl_im_ur_ln <- evaluar_estratificacion(marco_muestral = bd,
+                                      n_muestras = 100,
+                                      fracc_muestreo = .07,
+                                      id_estratos = estratificacion_df_dl_im_ur_ln,
+                                      candidatos = c(PAN,PRI,PRD, PT, PVEM, MC,
+                                                     NVA_ALIANZA, MORENA, PH, ES,
+                                                     PRI_PVEM, PRD_PT_NVA_ALIANZA,
+                                                     VOTOS_CAND_NREG))
+
+
+
+ja_con <- list(est_df %>% mutate(variable="df"),
+               est_dl %>% mutate(variable="dl"),
+               est_df_urb %>% mutate(variable="df_urb"),
+               est_df_ln %>% mutate(variable="df_ln"),
+               est_df_ln2 %>% mutate(variable="df_ln2"),
+               est_df_dl20 %>% mutate(variable="df_dl20"),
+               est_df_im %>% mutate(variable="df_im"),
+               est_df_dl_im_ur_ln %>% mutate(variable="df_dl_im_ur_ln")
+                 ) %>% reduce(bind_rows)
+```
+
+```{r}
+bd %>% 
+  pivot_longer(starts_with("estratificacion_"),names_to="variable", values_to="estrato", names_prefix="estratificacion_") %>% 
+  group_by(variable) %>% 
+  summarise(n_estrato=n_distinct(estrato)) %>% 
+  ggplot(aes(x=reorder(variable,n_estrato), y=n_estrato))+
+  geom_bar(stat="identity") +
+  labs(y="Variables de estratificación",
+       x="Número de estratos",
+       title="Número de estratos por criterio de estratificación")+
+  coord_flip()
+  
+```
+
+```{r}
+resumen2 <- ja_con %>% 
+  as_tibble() %>% 
+  group_by(variable,candidato) %>% 
+  summarise(cobertura=sum(contiene)/n()) 
+letrero <- resumen2 %>% summarise(cobertura=median(cobertura))
+resumen2 %>% 
+  ggplot()+
+  geom_hline(yintercept = .95, linetype=2, color="#1b998b")+
+  geom_line(aes(group=candidato, x=variable,y=cobertura), alpha=.2,color="#f46036")+
+  geom_line(data=letrero, aes(x=variable,y=cobertura), color="#f46036")+
+  geom_point(data=letrero, aes(x=variable,y=cobertura), color="#f46036")+
+  scale_y_continuous(name="Cobertura (%)",labels = scales::percent_format())+
+  theme(panel.grid.minor.x = element_blank(), 
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.major.y = element_blank()) 
+
+```
+
+```{r}
+evaluar_error <- function(estimaciones, error=0.01){
+  estimaciones %>% 
+    group_by(variable,muestra) %>%
+    summarise(sesgo=max(abs(sesgo))) %>%
+    ggplot(aes(x=variable, y=sesgo, group=variable)) +
+    scale_y_continuous(name=expression(paste(D[i]," = max{",hat(p[i])-p[i],"}")),
+                       labels = scales::percent_format())+
+    geom_boxplot(color="#2e294e",fill="#2e294e",alpha=.7)+
+    geom_hline(yintercept = error, linetype=2, color="#e71d36")+
+    labs(title = "Diferencia máxima por muestra entre el estimador puntual y el resultado",
+         subtitle = glue::glue("{scales::comma(max(evaluacion$muestra))} muestras"),
+         caption = glue::glue("n={round(mean(estimaciones$n))}"))+
+    theme(panel.grid.major.x =  element_blank(),
+          panel.grid.minor.x =  element_blank(),
+          axis.line.x = element_line()
+    )
+}
+
+evaluar_error(ja_con)
+
+ja_con %>% 
+  filter(variable %in% c("df_ln", "df_urb"),
+         candidato %in% c("PAN", "PRI", "PRD")) %>% 
+  ggplot(aes(x=candidato, y=abs(sesgo), color=variable))+
+  geom_boxplot()
+  
+```
+
+```{r}
+evaluar_precision <- function(estimaciones, precision=0.02){
+  estimaciones %>% 
+    group_by(variable,muestra) %>%
+    summarise(longitud_maxima=max(longitud_intervalo)) %>%
+    ggplot(aes(x=variable, y=longitud_maxima, group=variable)) +
+    scale_y_continuous(name=expression(paste(D[i]," = max{",hat(p[i])-p[i],"}")),
+                       labels = scales::percent_format())+
+    geom_boxplot(color="#2e294e",fill="#2e294e",alpha=.7)+
+    geom_hline(yintercept = precision, linetype=2, color="#e71d36")+
+    labs(title = "Longitud dele intervalo de estimación máxima por muestra",
+         subtitle = glue::glue("{scales::comma(max(evaluacion$muestra))} muestras"),
+         caption = glue::glue("n={round(mean(estimaciones$n))}"))+
+    theme(panel.grid.major.x =  element_blank(),
+          panel.grid.minor.x =  element_blank(),
+          axis.line.x = element_line()
+    )
+}
+
+evaluar_precision(ja_con)
+
+ja_con %>% 
+  filter(variable %in% c("df_ln", "df_urb"),
+         candidato %in% c("PAN", "PRI", "PRD")) %>% 
+  ggplot(aes(x=candidato, y=abs(longitud_intervalo), color=variable))+
+  geom_boxplot()
+
+```
+
+
+## Otros análisis  
+
+```{r}
+bd %>% count(is.na(ID_DISTRITO_LOCAL),
+             as.numeric(ID_DISTRITO_LOCAL)==as.numeric(ID_DTTO_LOCAL_jul2020))
+
+bd %>% count(is.na(ID_DISTRITO),
+             as.numeric(ID_DISTRITO)==as.numeric(ID_DTTO_FEDERAL_jul2020))
+```
+

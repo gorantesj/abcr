@@ -9,6 +9,7 @@ datos_muestra <- function(muestra, id_estratos, candidatos, n_sim=10000){
   estratos_muestra <- muestra %>%
     tidyr::pivot_longer({{candidatos}}, names_to="candidato", values_to="x") %>%
     group_by({{id_estratos}}, candidato) %>%
+    mutate(x=x+0.0001) %>%
     summarise(c=n(),
               n=sum(LISTA_NOMINAL),
               x2_n=sum(x^2/LISTA_NOMINAL),

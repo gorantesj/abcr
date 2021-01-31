@@ -23,7 +23,8 @@ Imports:
     dplyr,
     tidyr,
     truncnorm,
-    purrr
+    purrr,
+    patchwork
 URL: https://github.com/gorantesj/abcr
 BugReports: https://github.com/gorantesj/abcr/issues
 Suggests: 

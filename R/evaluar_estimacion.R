@@ -8,7 +8,6 @@
 #'
 #' @examples
 evaluar_estimacion <- function(resultado, marco_muestral){
-  browser()
   cand <- resultado %>% pull(candidato) %>% unique()
   reales <- marco_muestral %>%
     summarise(across(all_of(cand),~sum(.x))) %>%

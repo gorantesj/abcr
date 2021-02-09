@@ -14,12 +14,28 @@
 #' @importFrom purrr map2 map2 pmap
 #' @import dplyr
 #' @examples
-ajustar_modelo <- function(muestra,id_estratos , marco_muestral, candidatos,
-                           n_sim=10000, criterio_ce){
+ajustar_modelo <- function(muestra,
+                           id_estratos ,
+                           marco_muestral,
+                           candidatos,
+                           criterio_ce,
+                           nombre_estratos="",
+                           nombre_eleccion="",
+                           fuente="",
+                           n_sim=10000){
+
+  info <- info_estimacion(muestra = muestra,
+                          id_estratos = {{id_estratos}} ,
+                          marco_muestral =marco_muestral ,
+                          candidatos=candidatos,
+                          criterio_ce=criterio_ce,
+                          nombre_estratos=nombre_estratos,
+                          nombre_eleccion=nombre_eleccion,
+                          fuente=fuente)
   # Ajustar casillas especiales
-  bases_datos <- ajustar_casillas_especiales(muestra = muestra,
-                                             marco_muestral = marco_muestral,
-                                             criterio = criterio_ce)
+  bases_datos <- ajustar_casillas_especiales(muestra = info$muestra,
+                                             marco_muestral = info$marco_muestral,
+                                             criterio = info$criterio_ce)
   # Calcular pesos
   pesos <- calcular_pesos(marco_muestral = bases_datos$marco_muestral,
                           id_estratos = {{id_estratos}})
@@ -58,9 +74,46 @@ ajustar_modelo <- function(muestra,id_estratos , marco_muestral, candidatos,
     group_by(i) %>%
     mutate(lambda=lambda/sum(lambda)) %>%
     group_by(candidato) %>%
-    summarise(ic_025=quantile(lambda, probs = c(0.025)),
-              ic_975=quantile(lambda, probs = c(0.975)),
+    summarise(ic_025=quantile(lambda, probs = c(0.025),na.rm = F),
+              ic_975=quantile(lambda, probs = c(0.975),na.rm = F),
               est_puntual=mean(lambda)
               )
-  return(list(nacional=nacional, estratos=estratos))
+  return(list(nacional=nacional, estratos=estratos, info=info))
+}
+
+
+
+info_estimacion <- function(muestra,
+                            marco_muestral,
+                            id_estratos,
+                            candidatos,
+                            criterio_ce="2018",
+                            nombre_estratos="",
+                            nombre_eleccion="",
+                            fuente=""){
+
+  # Quitar grupos si los tiene
+  muestra <- muestra %>% ungroup()
+  marco_muestral <- marco_muestral %>% ungroup()
+
+  # Contruir mensaje
+  mensaje <- glue::glue("Se eliminaron {sum(is.na(muestra %>% pull({{id_estratos}})))} casillas de la muestra con valor NA en la variable de estratificación.
+                        Se eliminaron {sum(is.na(marco_muestral %>% pull({{id_estratos}})))} casillas de la muestra con valor NA en la variable de estratificación.")
+
+  # Eliminar tanto del marco muestral como de la muestra NA en variable de estratificación
+  muestra <- muestra %>% filter(!is.na({{id_estratos}}))
+  marco_muestral <- marco_muestral %>% filter(!is.na({{id_estratos}}))
+
+  # Declarar elementos de la info
+  info <- NULL
+  info$muestra <- muestra
+  info$marco_muestral <- marco_muestral
+  info$id_estratos <- rlang::expr_text(rlang::expr(id_estratos))
+  info$candidatos <- rlang::expr_text(rlang::expr(candidatos))
+  info$criterio_ce <- criterio_ce
+  info$nombre_estratos <- nombre_estratos
+  info$nombre_eleccion <- nombre_eleccion
+  info$fuente <- fuente
+
+  return(info)
 }

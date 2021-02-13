@@ -29,11 +29,13 @@ evaluar_n_cobertura <- function(estimaciones){
              color="#2e294e",
              geom = "text", hjust=0)+
     scale_y_continuous(name="Cobertura (%)",labels = scales::percent_format())+
-    scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(resumen$n))+
+    scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(resumen$n)) +
     theme(panel.grid.minor.x = element_blank(),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.y = element_blank(),
-          panel.grid.major.y = element_blank())
+          panel.grid.major.y = element_blank(),
+          panel.background =element_blank(),
+          )
 }
 
 #' Title
@@ -51,7 +53,7 @@ evaluar_n_error <- function(estimaciones, error=0.01){
     ggplot(aes(x=n, y=max_longitud, group=n)) +
     scale_y_continuous(name=expression(paste(D[i]," = max{",hat(p[i])-p[i],"}")),
                        labels = scales::percent_format())+
-    scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(resumen$n))+
+    scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(estimaciones$n))+
     geom_boxplot(color="#2e294e",fill="#2e294e",alpha=.7)+
     geom_hline(yintercept = error, linetype=2, color="#e71d36")+
     # labs(
@@ -59,7 +61,9 @@ evaluar_n_error <- function(estimaciones, error=0.01){
     #      subtitle = glue::glue("{scales::comma(max(evaluacion$muestra))} muestras"))+
     theme(panel.grid.major.x =  element_blank(),
           panel.grid.minor.x =  element_blank(),
-          axis.line.x = element_line()
+          panel.grid.major.y =  element_line(colour = "grey70"),
+          axis.line.x = element_line(),
+          panel.background = element_blank()
           )
 
 
@@ -82,14 +86,16 @@ evaluar_n_precision <- function(estimaciones,precision=0.02){
     geom_hline(yintercept = precision, linetype=2, color="#e71d36")+
     scale_y_continuous(name=expression(paste("Max{",q[i]-q[i],"}")),
                        labels = scales::percent_format())+
-    scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(resumen$n))+
+    scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(estimaciones$n))+
     # labs(
     #   title = "Longitud máxima por muestra del intervalo de estimación",
     #      subtitle = glue::glue("{scales::comma(max(evaluacion$muestra))} muestras"))+
     geom_boxplot(color="#2e294e",fill="#2e294e",alpha=.7)+
     theme(panel.grid.major.x =  element_blank(),
           panel.grid.minor.x =  element_blank(),
-          axis.line.x = element_line()
+          panel.grid.major.y =  element_line(colour = "grey70"),
+          axis.line.x = element_line(),
+          panel.background = element_blank()
     )
 }
 

@@ -23,7 +23,6 @@ ajustar_modelo <- function(muestra,
                            nombre_eleccion="",
                            fuente="",
                            n_sim=10000){
-
   info <- info_estimacion(muestra = muestra,
                           id_estratos = {{id_estratos}} ,
                           marco_muestral =marco_muestral ,
@@ -35,7 +34,7 @@ ajustar_modelo <- function(muestra,
   # Ajustar casillas especiales
   bases_datos <- ajustar_casillas_especiales(muestra = info$muestra,
                                              marco_muestral = info$marco_muestral,
-                                             criterio = info$criterio_ce)
+                                             criterio = criterio_ce)
   # Calcular pesos
   pesos <- calcular_pesos(marco_muestral = bases_datos$marco_muestral,
                           id_estratos = {{id_estratos}})
@@ -44,18 +43,20 @@ ajustar_modelo <- function(muestra,
                                     id_estratos = {{id_estratos}},
                                     candidatos = {{candidatos}},
                                     n_sim = n_sim)
-  # Simular parámetros
-  pesos <- tidyr::expand(pesos, tidyr::nesting(!!ensym(id_estratos), peso),
-                  candidato=unique(estratos_muestra$candidato))
+
+    # Remplaza NA por 0. Preguntar.
   estratos <- full_join(pesos,estratos_muestra) %>%
     mutate(across(everything(), ~tidyr::replace_na(.x, 0)))
+  # Simular Gamma y Theta. Utiliza uniforme. Necesita ser Beta.
+  # Revisar!!!!!!!
   estratos <- estratos %>%
     mutate(gamma=if_else(c>1,
                          map2(.x = alpha, .y=beta,
                               ~rgamma(n = n_sim, shape = .x,rate = .y)),
                          list(NA)),
            theta=if_else(c>1,
-                         pmap(list(x=mu, y=gamma, z=n),.f =  function(x, y, z){
+                         pmap(list(x=mu, y=gamma, z=n),
+                              .f =  function(x, y, z){
                            truncnorm::rtruncnorm(n=n_sim,
                                       mean = x,
                                       sd = (y*z)^(-1/2),
@@ -63,22 +64,35 @@ ajustar_modelo <- function(muestra,
                                       b=1)
                          } ),
                          list(runif(n=10000))))
+
   # Simular lambdas
-  nacional <- estratos %>%
+  simulaciones <- estratos %>%
     select({{id_estratos}}, candidato, peso, theta) %>%
     tidyr::unnest(theta) %>%
-    group_by({{id_estratos}} ,candidato) %>%
+    group_by({{id_estratos}}, candidato) %>%
+    # Ponderar theta por peso del estrato
     mutate(i=row_number(),theta=theta*peso) %>%
+    # Sumar todos los estratos por simulación
     group_by(candidato, i) %>%
-    summarise(lambda=sum(theta))%>%
+    summarise(theta=sum(theta)) %>%
+    # Relativizar
     group_by(i) %>%
-    mutate(lambda=lambda/sum(lambda)) %>%
+    mutate(PC=sum(theta),lambda=theta/PC)
+
+  nacional <- simulaciones %>%
+    # Resumir. Si queremos las simulaciones?
     group_by(candidato) %>%
     summarise(ic_025=quantile(lambda, probs = c(0.025),na.rm = F),
               ic_975=quantile(lambda, probs = c(0.975),na.rm = F),
-              est_puntual=mean(lambda)
+              est_puntual=mean(lambda),
+              `ic_025(PC)`=quantile(PC, probs = c(0.025),na.rm = F),
+              `ic_975(PC)`=quantile(PC, probs = c(0.975),na.rm = F),
+              `est_puntual(PC)`=mean(PC)
               )
-  return(list(nacional=nacional, estratos=estratos, info=info))
+  res <- list(nacional=nacional, estratos=estratos, info=info)
+  if(simulaciones) res <- append(res, simulaciones=simulaciones)
+
+  return()
 }
 
 

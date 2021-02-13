@@ -1,4 +1,5 @@
 calcular_pesos <- function(marco_muestral, id_estratos){
+  marco_muestral <- marco_muestral %>% filter(!is.na({{id_estratos}}))
   estratos <- marco_muestral %>%
     count({{id_estratos}}, wt=LISTA_NOMINAL,name = "peso") %>%
     mutate(peso=peso/sum(peso))

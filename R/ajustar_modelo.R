@@ -22,7 +22,8 @@ ajustar_modelo <- function(muestra,
                            nombre_estratos="",
                            nombre_eleccion="",
                            fuente="",
-                           n_sim=10000){
+                           n_sim=10000,
+                           regresar_sim=F){
   info <- info_estimacion(muestra = muestra,
                           id_estratos = {{id_estratos}} ,
                           marco_muestral =marco_muestral ,
@@ -43,7 +44,6 @@ ajustar_modelo <- function(muestra,
                                     id_estratos = {{id_estratos}},
                                     candidatos = {{candidatos}},
                                     n_sim = n_sim)
-
     # Remplaza NA por 0. Preguntar.
   estratos <- full_join(pesos,estratos_muestra) %>%
     mutate(across(everything(), ~tidyr::replace_na(.x, 0)))
@@ -90,9 +90,9 @@ ajustar_modelo <- function(muestra,
               `est_puntual(PC)`=mean(PC)
               )
   res <- list(nacional=nacional, estratos=estratos, info=info)
-  if(simulaciones) res <- append(res, simulaciones=simulaciones)
+  if(regresar_sim) res <- append(res, simulaciones=simulaciones)
 
-  return()
+  return(res)
 }
 
 

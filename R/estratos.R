@@ -1,12 +1,12 @@
-calcular_pesos <- function(marco_muestral, id_estratos){
+calcular_pesos <- function(marco_muestral, id_estratos, lista_nominal){
   marco_muestral <- marco_muestral %>% filter(!is.na({{id_estratos}}))
   estratos <- marco_muestral %>%
-    count({{id_estratos}}, wt=LISTA_NOMINAL,name = "peso") %>%
+    count({{id_estratos}}, wt={{lista_nominal}},name = "peso") %>%
     mutate(peso=peso/sum(peso))
   return(estratos)
 }
 
-datos_muestra <- function(muestra, id_estratos, candidatos, n_sim=10000){
+datos_muestra <- function(muestra, id_estratos, candidatos){
   estratos_muestra <- muestra %>%
     tidyr::pivot_longer({{candidatos}}, names_to="candidato", values_to="x") %>%
     group_by({{id_estratos}}, candidato) %>%

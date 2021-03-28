@@ -18,17 +18,19 @@ evaluar_n_cobertura <- function(estimaciones){
     geom_line(aes(group=candidato, x=n,y=cobertura), alpha=.2,color="#f46036")+
     geom_line(data=letrero, aes(x=n,y=cobertura), color="#f46036")+
     geom_point(data=letrero, aes(x=n,y=cobertura), color="#f46036")+
-    annotate(x=min(resumen$n),
-             y=min(resumen$cobertura),
-             geom = "point",
-             color="#f46036",
-             hjust="inward")+
-    annotate(x=min(resumen$n)*1.01,
-             y=min(resumen$cobertura),
-             label="cobertura mediana",
-             color="#2e294e",
-             geom = "text", hjust=0)+
-    scale_y_continuous(name="Cobertura (%)",labels = scales::percent_format())+
+    # annotate(x=min(resumen$n),
+    #          y=min(resumen$cobertura),
+    #          geom = "point",
+    #          color="#f46036",
+    #          hjust="inward")+
+    # annotate(x=min(resumen$n)*1.01,
+    #          y=min(resumen$cobertura),
+    #          label="cobertura mediana",
+    #          color="#2e294e",
+    #          geom = "text", hjust=0)+
+    scale_y_continuous(name="Cobertura (%)",
+                       labels = scales::percent_format(),
+                       limits=c(min(c(.7, min(resumen$cobertura))), 1))+
     scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(resumen$n)) +
     theme(panel.grid.minor.x = element_blank(),
           panel.grid.major.x = element_blank(),
@@ -84,7 +86,7 @@ evaluar_n_precision <- function(estimaciones,precision=0.02){
     summarise(max_longitud=max(longitud_intervalo)) %>%
     ggplot(aes(x=n, y=max_longitud, group=n)) +
     geom_hline(yintercept = precision, linetype=2, color="#e71d36")+
-    scale_y_continuous(name=expression(paste("Max{",q[i]-q[i],"}")),
+    scale_y_continuous(name=expression(paste(L[i],"=max{",q[.975i]-q[.025i],"}")),
                        labels = scales::percent_format())+
     scale_x_continuous(name="Tamaño de la muestra (n)", breaks = unique(estimaciones$n))+
     # labs(

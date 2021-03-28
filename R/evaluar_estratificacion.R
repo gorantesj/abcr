@@ -10,16 +10,22 @@
 #' @export
 #'
 #' @examples
-evaluar_estratificacion <- function(marco_muestral, n_muestras=100,
-                                    id_estratos, candidatos,
-                                    fracc_muestreo=0.05){
+evaluar_estratificacion <- function(marco_muestral,
+                                    n_muestras=100,
+                                    id_estratos,
+                                    candidatos,
+                                    fracc_muestreo=0.05,
+                                    reg_muestras=F,
+                                    guardar=F){
   muestras <-map(1:n_muestras,
                  ~marco_muestral %>%
+                   filter(!is.na({{id_estratos}})) %>%
                    group_by({{id_estratos}}) %>%
                    sample_frac(size=fracc_muestreo) %>%
                    mutate(variable=rlang::as_name(quote(id_estratos)),
                           muestra=.x))
   reales <- marco_muestral %>%
+    filter(!is.na({{id_estratos}})) %>%
     summarise(across({{candidatos}},
                      ~sum(.x))) %>%
     pivot_longer(everything(),
@@ -31,9 +37,10 @@ evaluar_estratificacion <- function(marco_muestral, n_muestras=100,
                           ~.x %>% ajustar_modelo(id_estratos = {{id_estratos}},
                                                  criterio_ce = "2018",
                                                  candidatos = {{candidatos}},
-                                                 marco_muestral = marco_muestral) %>%
+                                                 marco_muestral = marco_muestral,
+                                                 regresar_sim =   F) %>%
                             pluck("nacional") %>%
-                            mutate(variable=rlang::as_name(quote(id_estratos)),
+                            mutate(variable=rlang::expr_label(enquo(id_estratos)),
                                    muestra=.y,
                                    n=nrow(.x),
                                    longitud_intervalo=ic_975-ic_025))
@@ -43,8 +50,72 @@ evaluar_estratificacion <- function(marco_muestral, n_muestras=100,
                        round(valor,4)<=round(ic_975,4)),
            sesgo=est_puntual-valor
     )
+  if(guardar) save(estimaciones,
+                   file = paste0(stringr::str_remove_all(glue::glue("{rlang::expr_label(enquo(id_estratos))}m{n_muestras}f{100*fracc_muestreo}"),pattern = "[^[[:alnum:]]]"), ".RData"))
+  if(reg_muestras) estimaciones <- list(muestras=muestras, estimaciones=estimaciones)
   return(estimaciones)
+}
 
+#' Title
+#'
+#' @param marco_muestral
+#' @param n_muestras
+#' @param id_estratos
+#' @param candidatos
+#' @param fracc_muestreo
+#'
+#' @return
+#' @export
+#'
+#' @examples
+evaluar_estratificacion_censurada <- function(marco_muestral,
+                                    n_muestras=100,
+                                    id_estratos,
+                                    candidatos,
+                                    fracc_muestreo=0.05,
+                                    reg_muestras=F,
+                                    modelo,
+                                    guardar=F){
+  muestras <-map(1:n_muestras,
+                 ~marco_muestral %>%
+                   filter(!is.na({{id_estratos}})) %>%
+                   group_by({{id_estratos}}) %>%
+                   sample_frac(size=fracc_muestreo) %>%
+                   mutate(variable=rlang::as_name(quote(id_estratos)),
+                          muestra=.x))
+  reales <- marco_muestral %>%
+    filter(!is.na({{id_estratos}})) %>%
+    summarise(across({{candidatos}},
+                     ~sum(.x))) %>%
+    pivot_longer(everything(),
+                 names_to="candidato",
+                 values_to="valor") %>%
+    mutate(valor=valor/sum(valor))
+  estimaciones <- map2_df(.x=muestras,
+                          .y=1:length(muestras),
+                          ~.x %>% bind_cols(simular_lognormal(id = 1, datos = .x, reg = modelo,
+                                                               horas_censura = 4, solo_tiempos = T)) %>%
+                              filter(status==1) %>%
+                            ajustar_modelo(id_estratos = {{id_estratos}},
+                                                 criterio_ce = "2018",
+                                                 candidatos = {{candidatos}},
+                                                 marco_muestral = marco_muestral,
+                                                 regresar_sim =   F) %>%
+                            pluck("nacional") %>%
+                            mutate(variable=rlang::expr_label(enquo(id_estratos)),
+                                   muestra=.y,
+                                   n=nrow(.x),
+                                   longitud_intervalo=ic_975-ic_025))
+  estimaciones <- estimaciones %>%
+    full_join(.,reales) %>%
+    mutate(contiene=(round(valor,4)>=round(ic_025,4) &
+                       round(valor,4)<=round(ic_975,4)),
+           sesgo=est_puntual-valor
+    )
+  if(guardar) save(estimaciones,
+                   file = paste0(stringr::str_remove_all(glue::glue("censuradas{rlang::expr_label(enquo(id_estratos))}m{n_muestras}f{100*fracc_muestreo}"),pattern = "[^[[:alnum:]]]"), ".RData"))
+  if(reg_muestras) estimaciones <- list(muestras=muestras, estimaciones=estimaciones)
+  return(estimaciones)
 }
 
 #' Title
@@ -69,7 +140,8 @@ evaluar_estratificacion_cobertura <- function(estimaciones){
       geom_bar(aes(y=n,fill=as.factor(contiene)),
                stat = "identity") +
       geom_text(data = resumen %>% filter(contiene),
-                aes(y=n, label=scales::percent(n,accuracy = 1)), hjust=1, color="white")+
+                aes(y=n, label=scales::percent(n,accuracy = 1)),
+                hjust=1, color="white")+
       scale_x_discrete(name="Candidato")+
       scale_fill_manual(values = c("TRUE"="#1b998b","FALSE"="#e71d36"),
                         name="Contiene al valor",
@@ -86,7 +158,7 @@ evaluar_estratificacion_cobertura <- function(estimaciones){
                label=glue::glue("cobertura mediana {scales::percent(cobertura_mediana)}"),
                vjust=0, hjust=1)+
       labs(title = "Cobertura",
-           subtitle = glue::glue("{scales::comma(max(evaluacion$muestra))} muestras"),
+           subtitle = glue::glue("{scales::comma(max(estimaciones$muestra))} muestras"),
            caption = glue::glue("n={mean(estimaciones$n)}")) +
       coord_flip()+
       theme(panel.grid = element_blank(),
@@ -192,7 +264,7 @@ evaluar_estratificacion_precision <- function(estimaciones, precision=0.02){
       geom_hline(yintercept = precision, linetype=2)+
       theme_minimal()+
       scale_x_discrete(name="candidato")+
-      scale_y_continuous(name=expression(paste("L=",q[0.975]-q[0.025])),
+      scale_y_continuous(name=expression(paste(L[i],"=max{",q[0.975i]-q[0.025i])),
                          labels=scales::percent_format())+
       # labs(title="Longitud del intervalo",
       #      caption = glue::glue("n={mean(estimaciones$n)}"))+

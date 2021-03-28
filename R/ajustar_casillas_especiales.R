@@ -18,9 +18,9 @@ ajustar_casillas_especiales <- function(muestra, marco_muestral, criterio){
     marco_muestral <- marco_muestral %>%
       mutate(LISTA_NOMINAL=if_else(TIPO_CASILLA=="S", 750,LISTA_NOMINAL),
              LISTA_NOMINAL=LISTA_NOMINAL-750*(n_especiales/nn_especiales))
-             muestra <- muestra %>%
-               select(-LISTA_NOMINAL) %>%
-               inner_join(marco_muestral)
+    muestra <- muestra %>%
+      select(-LISTA_NOMINAL) %>%
+      inner_join(marco_muestral)
 
   }
   return(list(muestra=muestra,marco_muestral=marco_muestral))

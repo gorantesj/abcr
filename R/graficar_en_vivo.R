@@ -20,7 +20,9 @@ graficar_estimaciones_ev <-function(resultados,
         ggplot() +
         geom_bar(aes(x=reorder(candidato, -estimaciones),
                      y=estimaciones), stat="identity") +
-        labs(x="Candidato", y="Voto porcentual (%)")
+        labs(x="Candidato",
+             y="Voto porcentual (%)",
+             title = "Estimación puntual")
 
     }
     if(estimacion=="intervalos"){
@@ -32,9 +34,11 @@ graficar_estimaciones_ev <-function(resultados,
         ggplot(aes(x=reorder(candidato,-`2`))) +
         geom_linerange(aes(ymin=`0`, ymax=`2`)) +
         geom_point(aes(y=`1`)) +
-        labs(x="Candidato", y="Voto porcentual (%)")
+        labs(x="Candidato", y="Voto porcentual (%)",
+             title = "Intervalos de estimación")
 
     }
+    g <- g + scale_y_continuous(labels = scales::percent_format())
   }
   else{
     g <- NULL
@@ -58,9 +62,14 @@ graficar_distribucion_ev <- function(resultados, candidato,
     g <- resultados$estimaciones$lambda %>%
       filter(candidato == cand ) %>%
       ggplot(aes(x=theta, color=candidato))+
-      geom_density()
+      geom_density()+
+      scale_x_continuous(limits = c(min(resultados$remesas$remesa %>%
+                                          mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
+                                          pull(lambda)),
+                                    max(resultados$remesas$remesa %>%
+                                          mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
+                                          pull(lambda))))
     if(por_estrato){
-
       g1 <-  resultados$estimaciones$resumen_estratos %>%
         filter(candidato == cand ) %>%
         mutate(cota_inf=purrr::map_dbl(theta, ~quantile(.x, probs=c(0.025))),
@@ -69,30 +78,44 @@ graficar_distribucion_ev <- function(resultados, candidato,
         geom_linerange(aes(x=ID_ESTRATO_L,
                            ymin=cota_inf,
                            ymax=cota_sup,
-                           size=peso,
+                           # size=peso,
                            color=as.factor(ID_ESTRATO_L))) +
+        geom_point(data =resultados$remesas$remesa,
+                   aes(x=ID_ESTRATO_L,
+                       y={{candidato}}/LISTA_NOMINAL,
+                   ), size=.1)+
+        scale_y_continuous(limits = c(min(resultados$remesas$remesa %>%
+                                            mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
+                                            pull(lambda)),
+                                      max(resultados$remesas$remesa %>%
+                                            mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
+                                            pull(lambda))))+
         guides(color=F)+
         coord_flip()
       g <- (g/(g1 +theme_void()))+
         plot_layout(heights = c(7,3))
 
     }
-    if(por_casilla){
-      g2 <- resultados$remesas$remesa %>%
-        ggplot(aes(x={{candidato}}/LISTA_NOMINAL,ymin=0, ymax=1))+
-        geom_linerange()
-
-      (g/(g2 +theme_void()))+
-        plot_layout(heights = c(9,1)) &
-        scale_x_continuous(limits = c(min(resultados$remesas$remesa %>%
-                                            mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-                                            pull(lambda)),
-                                      max(resultados$remesas$remesa %>%
-                                            mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-                                            pull(lambda))))
-    }
+    # if(por_casilla){
+    #   g2 <- resultados$remesas$remesa %>%
+    #     ggplot(aes(x={{candidato}}/LISTA_NOMINAL,
+    #                ymin=0,
+    #                ymax=1,
+    #                color=as.factor(ID_ESTRATO_L)))+
+    #     geom_linerange() +
+    #     scale_x_continuous(limits = c(min(resultados$remesas$remesa %>%
+    #                                         mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
+    #                                         pull(lambda)),
+    #                                   max(resultados$remesas$remesa %>%
+    #                                         mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
+    #                                         pull(lambda)))) +
+    #     guides(color=F)
+    #
+    #   (g/(g2 +theme_void())) +
+    #     plot_layout(heights = c(7,3,1))
+    # }
   }
-
+  return(g)
 }
 
 #' Title
@@ -168,22 +191,33 @@ graficar_estimaciones_tiempo_ev <- function(carpeta, candidatos){
                          recursive = F,
                          all.files = F)
   estimaciones <- purrr::map_df(archivos,
-      ~.x %>%
-        readRDS() %>%
-        purrr::pluck("salidas.estimaciones") %>%
-        mutate(remesa=stringr::str_extract(.x, "[^/]*$") %>%
-                 stringr::str_remove(".rds") %>%
-                 as.numeric())
-        )
-  estimaciones %>%
-    tidyr::pivot_longer(cols = all_of(candidatos),
-                        names_to = "candidatos",
+                                ~{
+                                  estimaciones <- .x %>%
+                                    readRDS() %>%
+                                    purrr::pluck("salidas.estimaciones")
+                                  if(!is.null(estimaciones)){
+                                    estimaciones <- estimaciones %>%
+                                      mutate(remesa=stringr::str_extract(.x, "[^/]*$") %>%
+                                               stringr::str_remove(".rds") %>%
+                                               as.numeric())
+
+                                  }
+                                })
+
+  estimaciones <- estimaciones %>%
+    tidyr::pivot_longer(cols = {{candidatos}},
+                        names_to = "candidato",
                         values_to = "estimaciones") %>%
     tidyr::pivot_wider(names_from = "LMU", values_from = "estimaciones")
   if(nrow(estimaciones)>0){
-
-    ggplot()+
-      geom_ribbon(aes(x=remesa, ymin=))
+    estimaciones %>%
+      ggplot(aes(x=remesa,
+             color=candidato))+
+      geom_ribbon(aes(fill=candidato,
+                      ymin=`0`,
+                      ymax=`2`), alpha=.3)+
+      geom_line(aes(y=`1`))+
+      geom_point(aes(y=`1`))
   }
 
 }

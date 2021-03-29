@@ -121,7 +121,6 @@ info_estimacion <- function(muestra,
 }
 
 estimar_theta_gamma <- function(resumen, n_sim){
-  browser()
   resumen <- resumen %>%
     mutate(gamma=if_else(c>1,
                          map2(.x = alpha, .y=beta,

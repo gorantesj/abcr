@@ -55,25 +55,33 @@ graficar_estimaciones_ev <-function(resultados,
 #'
 #' @examples
 graficar_distribucion_ev <- function(resultados, candidato,
-                                     por_estrato=F,
-                                     por_casilla=F){
+                                     por_estrato=F){
   if(!is.null(resultados$estimaciones$lambda)){
     cand <- rlang::expr_text(substitute(candidato))
+    minimo <- min(c(resultados$remesas$remesa %>%
+                      mutate(theta={{candidato}}/LISTA_NOMINAL) %>% pull(theta),
+                    resultados$estimaciones$lambda %>%
+                      filter(candidato == cand ) %>%
+                      pull(theta)))
+    maximo <- max(c(resultados$remesas$remesa %>%
+                      mutate(theta={{candidato}}/LISTA_NOMINAL) %>% pull(theta),
+                    resultados$estimaciones$lambda %>%
+                      filter(candidato == cand )
+                    %>%pull(theta)))
     g <- resultados$estimaciones$lambda %>%
       filter(candidato == cand ) %>%
       ggplot(aes(x=theta, color=candidato))+
       geom_density()+
-      scale_x_continuous(limits = c(min(resultados$remesas$remesa %>%
-                                          mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-                                          pull(lambda)),
-                                    max(resultados$remesas$remesa %>%
-                                          mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-                                          pull(lambda))))
+      scale_x_continuous(limits = c(minimo, maximo))
     if(por_estrato){
-      g1 <-  resultados$estimaciones$resumen_estratos %>%
+      browser()
+      estratos <-  resultados$estimaciones$resumen_estratos %>%
         filter(candidato == cand ) %>%
         mutate(cota_inf=purrr::map_dbl(theta, ~quantile(.x, probs=c(0.025))),
-               cota_sup=purrr::map_dbl(theta, ~quantile(.x, probs=c(0.975)))) %>%
+               cota_sup=purrr::map_dbl(theta, ~quantile(.x, probs=c(0.975))))
+      minimo <- min(c(minimo, estratos %>% pull(cota_inf)))
+      maximo <- max(c(minimo, estratos %>% pull(cota_sup)))
+      g1 <- estratos %>%
         ggplot()+
         geom_linerange(aes(x=ID_ESTRATO_L,
                            ymin=cota_inf,
@@ -84,36 +92,13 @@ graficar_distribucion_ev <- function(resultados, candidato,
                    aes(x=ID_ESTRATO_L,
                        y={{candidato}}/LISTA_NOMINAL,
                    ), size=.1)+
-        scale_y_continuous(limits = c(min(resultados$remesas$remesa %>%
-                                            mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-                                            pull(lambda)),
-                                      max(resultados$remesas$remesa %>%
-                                            mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-                                            pull(lambda))))+
+        scale_y_continuous(limits = c(minimo,maximo))+
         guides(color=F)+
         coord_flip()
       g <- (g/(g1 +theme_void()))+
         plot_layout(heights = c(7,3))
 
     }
-    # if(por_casilla){
-    #   g2 <- resultados$remesas$remesa %>%
-    #     ggplot(aes(x={{candidato}}/LISTA_NOMINAL,
-    #                ymin=0,
-    #                ymax=1,
-    #                color=as.factor(ID_ESTRATO_L)))+
-    #     geom_linerange() +
-    #     scale_x_continuous(limits = c(min(resultados$remesas$remesa %>%
-    #                                         mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-    #                                         pull(lambda)),
-    #                                   max(resultados$remesas$remesa %>%
-    #                                         mutate(lambda={{candidato}}/LISTA_NOMINAL) %>%
-    #                                         pull(lambda)))) +
-    #     guides(color=F)
-    #
-    #   (g/(g2 +theme_void())) +
-    #     plot_layout(heights = c(7,3,1))
-    # }
   }
   return(g)
 }
@@ -212,7 +197,7 @@ graficar_estimaciones_tiempo_ev <- function(carpeta, candidatos){
   if(nrow(estimaciones)>0){
     estimaciones %>%
       ggplot(aes(x=remesa,
-             color=candidato))+
+                 color=candidato))+
       geom_ribbon(aes(fill=candidato,
                       ymin=`0`,
                       ymax=`2`), alpha=.3)+
@@ -223,3 +208,22 @@ graficar_estimaciones_tiempo_ev <- function(carpeta, candidatos){
 }
 
 # mostrat_texto_ev <- function(resultad)
+
+#' Title
+#'
+#' @param resultados
+#'
+#' @return
+#' @export
+#'
+#' @examples
+graficar_arribo_remesas_ev <- function(resultados){
+  g <- resultados$remesas$remesa %>% select(DIA, HORA, MINUTOS) %>%
+    mutate(fecha=lubridate::ymd_hm(glue::glue("2021-06-{DIA} {HORA}:{MINUTOS}")),
+           fecha=lubridate::floor_date(fecha, unit = "10 minutes")) %>%
+    count(fecha) %>%
+    mutate(n=cumsum(n)/sum(n)) %>%
+    ggplot(aes(x=fecha, y=n))+ geom_point() +geom_smooth()
+
+
+}

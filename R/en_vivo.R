@@ -55,8 +55,10 @@ correr_conteo_rapido <- function(carpeta_remesas,
                                  resultados = resultados,
                                  n_sim=n_sim)
 
+
     # Salidas -----------------------------------------------------------------
     res <- construir_salidas(res,carpeta_unicom = carpeta_INE)
+
   }
   # Constuir resultados
   saveRDS(object = res,
@@ -146,24 +148,19 @@ producir_estimaciones <- function(remesas,
     mutate(LISTA_NOMINAL=if_else(LISTA_NOMINAL==0,
                                  450,
                                  as.numeric(LISTA_NOMINAL)))
-  # Cambiar remesa$ remesas
-  # Ajustar lista nominal de remesa
-  # Crear resumen estratos
+  # Resumen estratos
+  # Falta parametrizar el id_estrato. Nesting.
   resumen_estratos <- datos_muestra(remesas$remesas$remesa,
                                     id_estrato = {{id_estrato}},
                                     candidatos = {{candidatos}})
+  resumen_estratos <- full_join(resultados$pesos,resumen_estratos) %>%
+    complete(nesting(ID_ESTRATO_L,peso), candidato,
+             fill = list(c=0,n=0,x2_n=0,x=0,mu=0,alpha=NA,beta=NA)) %>%
+    filter(!is.na(candidato))
   # Primera vez
   if(is.null(resultados$estimaciones$resumen_estratos)){
     # Construir resumen inicial
-    # nueva_informacion <-remesas$remesa
-    # Resumen estratos
-    # Falta parametrizar el id_estrato. Nesting.
     estimaciones$resumen_estratos <- resumen_estratos
-    estimaciones$resumen_estratos <- full_join(resultados$pesos,
-                                               estimaciones$resumen_estratos) %>%
-      complete(nesting(ID_ESTRATO_L,peso), candidato,
-               fill = list(c=0,n=0,x2_n=0,x=0,mu=0,alpha=NA,beta=NA)) %>%
-      filter(!is.na(candidato))
     # Simular parámetros gamma y theta
     estimaciones$resumen_estratos <- estimaciones$resumen_estratos %>%
       estimar_theta_gamma(n_sim = n_sim)
@@ -171,8 +168,9 @@ producir_estimaciones <- function(remesas,
 
   }
   else{
-    interseccion <- dplyr::semi_join(resumen_estratos,
-                                     resultados$estimaciones$resumen_estratos,
+
+    interseccion <- dplyr::semi_join(resultados$estimaciones$resumen_estratos,
+                                     resumen_estratos,
                                      by=c("ID_ESTRATO_L", "candidato", "c"))
     # Checar que todas las casillas de la nueva remesa pertenezcan al marco muestral
     # Cambiar remesas$remesa
@@ -184,15 +182,17 @@ producir_estimaciones <- function(remesas,
       estimaciones$info <- "La nueva remesa no contiene nueva información."
     }
     else{
+
       diferencia <- diferencia %>%
         estimar_theta_gamma(n_sim = n_sim)
-      estimaciones$resumen_estratos <- bind_rows(interseccion, diferencia) %>%
-        left_join(resultados$pesos)
+      estimaciones$resumen_estratos <- bind_rows(interseccion ,
+                                                 diferencia)
       estimaciones$info <- "La nueva remesa contiene nueva información."
     }
   }
   # Existe información en resumen_estratos
   if(!is.null(estimaciones$resumen_estratos)){
+
     estimaciones$lambdas <-  estimaciones$resumen_estratos %>%
       select({{id_estrato}}, candidato, peso, theta) %>%
       tidyr::unnest(theta) %>%
@@ -218,6 +218,7 @@ construir_salidas <- function(resultados,
                               equipo="equipo2",
                               carpeta_unicom
 ){
+
   estimaciones_unicom <- resultados$estimaciones$lambdas %>%
     group_by(candidato) %>%
     summarise(estimaciones=quantile(lambda,probs=c(.025,.5, .975)), LMU=0:2) %>%

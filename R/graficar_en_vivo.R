@@ -100,6 +100,9 @@ graficar_distribucion_ev <- function(resultados, candidato,
 
     }
   }
+  else{
+    g <- NULL
+  }
   return(g)
 }
 
@@ -207,7 +210,21 @@ graficar_estimaciones_tiempo_ev <- function(carpeta, candidatos){
 
 }
 
-# mostrat_texto_ev <- function(resultad)
+#' Title
+#'
+#' @param resultados
+#'
+#' @return
+#' @export
+#'
+#' @examples
+graficar_mensajes_ev <- function(resultados){
+  g <- glue::glue("{resultados$remesas$info$mensaje}.\n")
+  if(!is.null(resultados$estimaciones$info))g <- glue::glue("{g}{resultados$estimaciones$info}")
+  if(!is.null({resultados$salidas.mensaje}))g <- glue::glue("{g}{resultados$salidas.mensaje}")
+  return(g)
+
+}
 
 #' Title
 #'

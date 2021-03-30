@@ -126,7 +126,7 @@ leer_remesas <- function(carpeta_remesas, resultados=NULL){
   res <- list(remesas=list(
     remesa=remesa,
     info=info,
-    remesas_analizadas=c(resultados$remesas_analizadas,
+    remesas_analizadas=c(resultados$remesas$remesas_analizadas,
                          remesa_nombre)
   ),
   contador = resultados$contador+1,

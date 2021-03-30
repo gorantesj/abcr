@@ -74,7 +74,7 @@ graficar_distribucion_ev <- function(resultados, candidato,
       geom_density()+
       scale_x_continuous(limits = c(minimo, maximo))
     if(por_estrato){
-      browser()
+
       estratos <-  resultados$estimaciones$resumen_estratos %>%
         filter(candidato == cand ) %>%
         mutate(cota_inf=purrr::map_dbl(theta, ~quantile(.x, probs=c(0.025))),
@@ -96,7 +96,7 @@ graficar_distribucion_ev <- function(resultados, candidato,
         guides(color=F)+
         coord_flip()
       g <- (g/(g1 +theme_void()))+
-        plot_layout(heights = c(7,3))
+        plot_layout(heights = c(5,5))
 
     }
   }
@@ -220,8 +220,8 @@ graficar_estimaciones_tiempo_ev <- function(carpeta, candidatos){
 #' @examples
 graficar_mensajes_ev <- function(resultados){
   g <- glue::glue("{resultados$remesas$info$mensaje}.\n")
-  if(!is.null(resultados$estimaciones$info))g <- glue::glue("{g}{resultados$estimaciones$info}")
-  if(!is.null({resultados$salidas.mensaje}))g <- glue::glue("{g}{resultados$salidas.mensaje}")
+  if(!is.null(resultados$estimaciones$info))g <- glue::glue("{g}.\n{resultados$estimaciones$info}")
+  if(!is.null({resultados$salidas.mensaje}))g <- glue::glue("{g}.\n{resultados$salidas.mensaje}")
   return(g)
 
 }

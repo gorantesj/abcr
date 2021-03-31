@@ -145,9 +145,14 @@ producir_estimaciones <- function(remesas,
   estimaciones <- NULL
   # Ajustar la lista nominal de las remesas. PROVISIONAL!!!!!!
   remesas$remesas$remesa <- remesas$remesas$remesa %>%
-    mutate(LISTA_NOMINAL=if_else(LISTA_NOMINAL==0,
-                                 450,
-                                 as.numeric(LISTA_NOMINAL)))
+    mutate(id=paste(iD_ESTADO,
+                    SECCION,
+                    ID_CASILLA,
+                    TIPO_CASILLA,
+                    EXT_CONTIGUA, sep="-"))
+  remesas$remesas$remesa <- remesas$remesas$remesa %>%
+    select(-LISTA_NOMINAL) %>%
+    inner_join(remesas$marco_muestral %>% select(id, LISTA_NOMINAL=ln_total))
   # Resumen estratos
   # Falta parametrizar el id_estrato. Nesting.
   resumen_estratos <- datos_muestra(remesas$remesas$remesa,

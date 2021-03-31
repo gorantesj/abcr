@@ -163,7 +163,7 @@ producir_estimaciones <- function(remesas,
     estimaciones$resumen_estratos <- resumen_estratos
     # Simular parámetros gamma y theta
     estimaciones$resumen_estratos <- estimaciones$resumen_estratos %>%
-      estimar_theta_gamma(n_sim = n_sim)
+      estimar_theta_gamma(n_sim = n_sim,n_candidatos=5, part_historica=.45)
     estimaciones$info <- "La nueva remesa contiene nueva información."
 
   }
@@ -184,7 +184,7 @@ producir_estimaciones <- function(remesas,
     else{
 
       diferencia <- diferencia %>%
-        estimar_theta_gamma(n_sim = n_sim)
+        estimar_theta_gamma(n_sim = n_sim,n_candidatos=5, part_historica=.45)
       estimaciones$resumen_estratos <- bind_rows(interseccion ,
                                                  diferencia)
       estimaciones$info <- "La nueva remesa contiene nueva información."
@@ -205,6 +205,11 @@ producir_estimaciones <- function(remesas,
       summarise(theta=sum(theta)) %>%
       # Dividir
       mutate(PC=sum(theta),lambda=theta/PC)
+    # Simular Participación
+    estimaciones$participacion <-  estimaciones$lambdas %>%
+      group_by(i) %>% summarise(PC=mean(PC))
+
+    estimaciones$lambdas <- estimaciones$lambdas %>% select(-PC)
   }
   # Regresar remesa, lambdas, thetas, participación
   res <- c(
@@ -218,7 +223,7 @@ construir_salidas <- function(resultados,
                               equipo="equipo2",
                               carpeta_unicom
 ){
-
+  # Candidatos
   estimaciones_unicom <- resultados$estimaciones$lambdas %>%
     group_by(candidato) %>%
     summarise(estimaciones=quantile(lambda,probs=c(.025,.5, .975)), LMU=0:2) %>%
@@ -229,6 +234,14 @@ construir_salidas <- function(resultados,
     rename_with(.cols = starts_with("cand"),
                 ~ stringr::str_replace(string = .,
                                        pattern = "cand",replacement = ""))
+  # Participación
+  estimaciones_unicom_part <- resultados$estimaciones$participacion %>%
+    summarise(PART=quantile(PC,probs=c(.025,.5, .975)), LMU=0:2)
+
+  # Pegar participacion y candidatos
+  estimaciones_unicom <- bind_cols(estimaciones_unicom %>% select(-LMU),
+                                    estimaciones_unicom_part,
+                                    by="LMU")
 
   readr::write_excel_csv(estimaciones_unicom,
                          file = paste(paste(carpeta_unicom,

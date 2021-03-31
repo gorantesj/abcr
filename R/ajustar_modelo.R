@@ -120,7 +120,7 @@ info_estimacion <- function(muestra,
   return(info)
 }
 
-estimar_theta_gamma <- function(resumen, n_sim){
+estimar_theta_gamma <- function(resumen, n_sim, n_candidatos, part_historica){
   resumen <- resumen %>%
     mutate(gamma=if_else(c>1,
                          map2(.x = alpha, .y=beta,
@@ -135,7 +135,10 @@ estimar_theta_gamma <- function(resumen, n_sim){
                                                       a=0,
                                                       b=1)
                               } ),
-                         map(c, ~ runif(n_sim))))
+                         map(c, ~{
+                           b<-n_candidatos*.1/(part_historica)-.1
+                           rbeta(shape1 = .1, shape2 = b, n_sim)
+                         })))
   return(resumen)
 
 }

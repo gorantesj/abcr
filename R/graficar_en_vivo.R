@@ -219,9 +219,9 @@ graficar_estimaciones_tiempo_ev <- function(carpeta, candidatos){
 #'
 #' @examples
 graficar_mensajes_ev <- function(resultados){
-  g <- glue::glue("{resultados$remesas$info$mensaje}.\n")
-  if(!is.null(resultados$estimaciones$info))g <- glue::glue("{g}.\n{resultados$estimaciones$info}")
-  if(!is.null({resultados$salidas.mensaje}))g <- glue::glue("{g}.\n{resultados$salidas.mensaje}")
+  g <- glue::glue("{resultados$remesas$info$mensaje}\n")
+  if(!is.null(resultados$estimaciones$info))g <- glue::glue("{g}\n{resultados$estimaciones$info}")
+  if(!is.null({resultados$salidas.mensaje}))g <- glue::glue("{g}\n{resultados$salidas.mensaje}")
   return(g)
 
 }

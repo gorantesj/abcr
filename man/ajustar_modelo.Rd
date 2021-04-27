@@ -6,25 +6,29 @@
 \usage{
 ajustar_modelo(
   muestra,
-  id_estratos,
+  id_estrato,
   marco_muestral,
   candidatos,
+  criterio_ce,
+  nombre_estratos = "",
+  nombre_eleccion = "",
+  fuente = "",
   n_sim = 10000,
-  criterio_ce
+  regresar_sim = F
 )
 }
 \arguments{
 \item{muestra}{Base de datos de muestra. Debe contener las columnas con resultados por candidato, el identificador del estrato y la lista nominal.}
 
-\item{id_estratos}{El nombre de la variable dentro de la base de datos que identifica a los estratos.}
+\item{id_estrato}{El nombre de la variable dentro de la base de datos que identifica a los estratos.}
 
 \item{marco_muestral}{Base de datos que contiene el marco muestral. Debe contener un identificar de estrato y la lista nominal.}
 
 \item{candidatos}{Un vector con los nombres de las variables de los candidatos cuya votación se desea estimar.}
 
-\item{n_sim}{El número de simulaciones para los parámetros.}
-
 \item{criterio_ce}{\bold{Default:} "2018".}
+
+\item{n_sim}{El número de simulaciones para los parámetros.}
 }
 \value{
 

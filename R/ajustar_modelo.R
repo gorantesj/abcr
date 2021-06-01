@@ -51,7 +51,10 @@ ajustar_modelo <- function(muestra,
     mutate(across(everything(), ~tidyr::replace_na(.x, 0)))
   # Simular Gamma y Theta. Utiliza uniforme. Necesita ser Beta.
   # Revisar!!!!!!!
-  estratos <- estimar_theta_gamma(estratos, n_sim=n_sim)
+  estratos <- estimar_theta_gamma(estratos,
+                                  n_sim=n_sim,
+                                  n_candidatos=length(candidatos),
+                                  part_historica=.5)
 
   # Simular lambdas
   simulaciones <- estratos %>%
@@ -122,11 +125,11 @@ info_estimacion <- function(muestra,
 
 estimar_theta_gamma <- function(resumen, n_sim, n_candidatos, part_historica){
   resumen <- resumen %>%
-    mutate(gamma=if_else(c>1,
+    mutate(gamma=if_else(c_i>1,
                          map2(.x = alpha, .y=beta,
                               ~rgamma(n = n_sim, shape = .x,rate = .y)),
                          list(NA)),
-           theta=if_else(c>1,
+           theta=if_else(c_i>1,
                          pmap(list(x=mu, y=gamma, z=n),
                               .f =  function(x, y, z){
                                 truncnorm::rtruncnorm(n=n_sim,
@@ -135,7 +138,7 @@ estimar_theta_gamma <- function(resumen, n_sim, n_candidatos, part_historica){
                                                       a=0,
                                                       b=1)
                               } ),
-                         map(c, ~{
+                         map(c_i, ~{
                            b<-n_candidatos*.1/(part_historica)-.1
                            rbeta(shape1 = .1, shape2 = b, n_sim)
                          })))

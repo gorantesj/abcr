@@ -9,14 +9,27 @@
 #' @examples
 graficar_estimaciones_ev <-function(resultados,
                                     candidatos,
-                                    estimacion="puntual"){
+                                    estimacion="puntual",
+                                    participacion=F){
   if(!is.null(resultados$salidas.estimaciones)){
     if(estimacion=="puntual"){
-      g <- resultados$salidas.estimaciones %>%
-        tidyr::pivot_longer({{candidatos}},
-                            names_to = "candidato",
-                            values_to = "estimaciones") %>%
-        filter(LMU==1) %>%
+      if(participacion){
+        g <- resultados$salidas.estimaciones %>%
+          select(PART, LMU) %>%
+          tidyr::pivot_longer(PART,
+                              names_to = "candidato",
+                              values_to = "estimaciones")
+
+      }
+      else{
+        g <- resultados$salidas.estimaciones %>%
+          select(-PART) %>%
+          tidyr::pivot_longer({{candidatos}},
+                              names_to = "candidato",
+                              values_to = "estimaciones")
+
+      }
+      g <- g %>% filter(LMU==1) %>%
         ggplot() +
         geom_bar(aes(x=reorder(candidato, -estimaciones),
                      y=estimaciones), stat="identity") +
@@ -24,21 +37,35 @@ graficar_estimaciones_ev <-function(resultados,
              y="Voto porcentual (%)",
              title = "Estimación puntual")
 
+
     }
     if(estimacion=="intervalos"){
-      g <- resultados$salidas.estimaciones %>%
-        tidyr::pivot_longer({{candidatos}},
-                            names_to = "candidato",
-                            values_to = "estimaciones") %>%
+      if(participacion){
+        g <- resultados$salidas.estimaciones %>%
+          select(PART, LMU) %>%
+          tidyr::pivot_longer(PART,
+                              names_to = "candidato",
+                              values_to = "estimaciones")
+
+      }
+      else{
+        g <- resultados$salidas.estimaciones %>%
+          select(-PART) %>%
+          tidyr::pivot_longer({{candidatos}},
+                              names_to = "candidato",
+                              values_to = "estimaciones")
+
+      }
+      g <- g %>%
         tidyr::pivot_wider(names_from = LMU, values_from = estimaciones) %>%
         ggplot(aes(x=reorder(candidato,-`2`))) +
-        geom_linerange(aes(ymin=`0`, ymax=`2`)) +
-        geom_point(aes(y=`1`)) +
+        geom_errorbar(aes(ymin=`0`, ymax=`2`)) +
+        # geom_point(aes(y=`1`)) +
         labs(x="Candidato", y="Voto porcentual (%)",
              title = "Intervalos de estimación")
 
     }
-    g <- g + scale_y_continuous(labels = scales::percent_format())
+    g <- g + scale_y_continuous()
   }
   else{
     g <- NULL
@@ -116,16 +143,23 @@ graficar_distribucion_ev <- function(resultados, candidato,
 #' @examples
 graficar_probabilidad_ev <- function(resultados){
   if(!is.null(resultados$estimaciones$lambda)){
-    b$estimaciones$lambda %>%
+    base <- resultados$estimaciones$lambda %>%
       group_by(i) %>%
       summarise(ganador=unique(candidato)[which.max(lambda)]) %>%
       group_by(ganador) %>%
       summarise(prob=n()) %>%
-      mutate(prob=prob/sum(prob)) %>%
-      ggplot(aes(x=ganador)) +
-      geom_linerange(aes(ymin=0, ymax=prob))+
+      mutate(prob=prob/sum(prob),
+             linea=row_number()
+             )
+    base %>%
+      ggplot(aes(x=linea, y=prob)) +
+      geom_bar(aes(y=1),stat="identity", fill="beige")+
+      geom_bar(aes(fill=ganador),stat="identity")+
       coord_polar(theta = "y") +
-      scale_x_continuous(limits = c(0.5,1.5))
+      scale_y_continuous(limits=c(0,1))+
+      # scale_x_continuous(limits=c(min(base$linea)-max(base$linea)/2,
+      #                             max(base$linea)))+
+      theme_void()
   }
 }
 

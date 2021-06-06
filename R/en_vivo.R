@@ -18,7 +18,8 @@ correr_conteo_rapido <- function(carpeta_remesas,
                                  marco_muestral,
                                  n_sim=10000,
                                  tipo_casilla=TIPO_CASILLA,
-                                 resultados=NULL){
+                                 resultados=NULL,
+                                 raiz=raiz){
   info_eleccion <- info_eleccion %>% filter(nombre_estado==estado)
   marco_muestral <- marco_muestral %>%
     filter(ID_ESTADO==unique(info_eleccion$id_estado))
@@ -75,9 +76,11 @@ correr_conteo_rapido <- function(carpeta_remesas,
                                       info_eleccion$abreviatura,
                                       sep="/")
 
+
     res <- construir_salidas(res,
                              carpeta_unicom = carpeta_INE,
-                             carpeta_interna=carpeta_interna_auxiliar)
+                             carpeta_interna=carpeta_interna_auxiliar,
+                             candidatos_orden=candidatos)
 
   }
   # Constuir resultados
@@ -201,6 +204,7 @@ producir_estimaciones <- function(remesas,
     # Construir resumen inicial
     estimaciones$resumen_estratos <- resumen_estratos
     # Simular parámetros gamma y theta
+
     estimaciones$resumen_estratos <- estimaciones$resumen_estratos %>%
       estimar_theta_gamma(n_sim = n_sim,n_candidatos=length(candidatos), part_historica=.45)
     estimaciones$info <- "La nueva remesa contiene nueva información."
@@ -263,7 +267,8 @@ producir_estimaciones <- function(remesas,
 construir_salidas <- function(resultados,
                               equipo="mendoza",
                               carpeta_unicom,
-                              carpeta_interna
+                              carpeta_interna,
+                              candidatos_orden
 ){
   # Remesa
   entidad <- last(resultados$remesas$remesas_analizadas) %>%
@@ -283,7 +288,8 @@ construir_salidas <- function(resultados,
     select(EQ, EN,R, starts_with("cand"), LMU, -candCNR, -candNULOS) %>%
     rename_with(.cols = starts_with("cand"),
                 ~ stringr::str_replace(string = .,
-                                       pattern = "cand",replacement = ""))
+                                       pattern = "cand",replacement = "")) %>%
+    select(EQ, EN,R,candidatos_orden[!candidatos_orden %in% c("CNR", "NULOS")], LMU)
   # Participación
   estimaciones_unicom_part <- resultados$estimaciones$participacion %>%
     summarise(PART=round(100*quantile(PC,probs=c(.025,.5, .975)),1),

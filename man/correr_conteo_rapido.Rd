@@ -14,7 +14,8 @@ correr_conteo_rapido(
   marco_muestral,
   n_sim = 10000,
   tipo_casilla = TIPO_CASILLA,
-  resultados = NULL
+  resultados = NULL,
+  raiz = raiz
 )
 }
 \arguments{
